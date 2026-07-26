@@ -1,19 +1,25 @@
-import { IsOptional, IsString, IsUrl, IsUUID } from 'class-validator';
+import { IsUrl, IsString, IsOptional, MaxLength } from 'class-validator';
 
 export class UpdateBookmarkDto {
-  @IsUrl()
   @IsOptional()
+  @IsUrl()
   url?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
+  @MaxLength(200)
   title?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
+  @MaxLength(1000)
   description?: string;
 
-  @IsUUID()
   @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @IsOptional()
+  @IsString()
   collectionId?: string;
 }

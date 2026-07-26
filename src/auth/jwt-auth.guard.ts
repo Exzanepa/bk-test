@@ -12,7 +12,7 @@ export class JwtAuthGuard implements CanActivate {
     const token = auth.split(' ')[1];
     try {
       const payload = await this.authService.verifyToken(token);
-      req.user = payload; // sub = auth0Id
+      req.user = payload;
       return true;
     } catch(e) {
       throw new UnauthorizedException('Invalid token: '+(e as Error).message);

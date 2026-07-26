@@ -1,98 +1,44 @@
-import { Controller, Get, Post, Put, Patch, Delete, Body, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, NotFoundException } from '@nestjs/common';
 import { CollectionsService } from './collections.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { UsersService } from '../users/users.service';
-import { CreateCollectionDto } from './dto/create-collection.dto';
-import { UpdateCollectionDto } from './dto/update-collection.dto';
-import { BookmarksService } from '../bookmarks/bookmarks.service';
+import { PrismaService } from '../prisma/prisma.service';
 
-@UseGuards(JwtAuthGuard)
 @Controller('collections')
+@UseGuards(JwtAuthGuard)
 export class CollectionsController {
   constructor(
-    private collectionsService: CollectionsService,
-    private usersService: UsersService,
-    private bookmarksService: BookmarksService,
+    private readonly collectionsService: CollectionsService,
+    private readonly prisma: PrismaService,
   ) {}
 
+  private async getUserId(auth0Id: string) {
+    const user = await this.prisma.user.findUnique({ where: { auth0Id } });
+    if (!user) throw new NotFoundException('User not found - run seed');
+    return user.id;
+  }
+
   @Post()
-  async create(
-    @CurrentUser() authUser: any,
-    @Body() dto: CreateCollectionDto,
-  ) {
-    const auth0Id = authUser.sub || authUser.auth0Id;
-    const email = authUser.email || authUser['https://bbl-candidate-test-api/email'] || `${auth0Id}@test.local`;
-    const user = await this.usersService.findOrCreate(auth0Id, email);
-    return this.collectionsService.create(user.id, dto.name);
+  async create(@Req() req: any, @Body() body: any) {
+    const userId = await this.getUserId(req.user.sub);
+    const name = body.name;
+    return this.collectionsService.create(userId, name);
   }
 
   @Get()
-  async findAll(@CurrentUser() authUser: any) {
-    const auth0Id = authUser.sub || authUser.auth0Id;
-    const email = authUser.email || `${auth0Id}@test.local`;
-    const user = await this.usersService.findOrCreate(auth0Id, email);
-    return this.collectionsService.findAll(user.id);
+  async findAll(@Req() req: any) {
+    const userId = await this.getUserId(req.user.sub);
+    return this.collectionsService.findAll(userId);
   }
 
   @Get(':id')
-  async findOne(
-    @CurrentUser() authUser: any,
-    @Param('id') id: string,
-  ) {
-    const auth0Id = authUser.sub || authUser.auth0Id;
-    const email = authUser.email || `${auth0Id}@test.local`;
-    const user = await this.usersService.findOrCreate(auth0Id, email);
-    return this.collectionsService.findOne(user.id, id);
-  }
-
-  
-  @Put(':id')
-  async replace(
-    @CurrentUser() authUser: any,
-    @Param('id') id: string,
-    @Body() dto: UpdateCollectionDto,
-  ) {
-    const auth0Id = authUser.sub || authUser.auth0Id;
-    const email = authUser.email || `${auth0Id}@test.local`;
-    const user = await this.usersService.findOrCreate(auth0Id, email);
-    return this.collectionsService.update(user.id, id, dto.name!);
-  }
-
-  @Patch(':id')
-  async update(
-    @CurrentUser() authUser: any,
-    @Param('id') id: string,
-    @Body() dto: UpdateCollectionDto,
-  ) {
-    const auth0Id = authUser.sub || authUser.auth0Id;
-    const email = authUser.email || `${auth0Id}@test.local`;
-    const user = await this.usersService.findOrCreate(auth0Id, email);
-    return this.collectionsService.update(user.id, id, dto.name!);
+  async findOne(@Req() req: any, @Param('id') id: string) {
+    const userId = await this.getUserId(req.user.sub);
+    return this.collectionsService.findOne(userId, id);
   }
 
   @Delete(':id')
-  async remove(
-    @CurrentUser() authUser: any,
-    @Param('id') id: string,
-  ) {
-    const auth0Id = authUser.sub || authUser.auth0Id;
-    const email = authUser.email || `${auth0Id}@test.local`;
-    const user = await this.usersService.findOrCreate(auth0Id, email);
-    return this.collectionsService.remove(user.id, id);
-  }
-
-  // §3.1.4 GET /collections/:id/bookmarks
-  @Get(':id/bookmarks')
-  async findBookmarks(
-    @CurrentUser() authUser: any,
-    @Param('id') id: string,
-  ) {
-    const auth0Id = authUser.sub || authUser.auth0Id;
-    const email = authUser.email || `${auth0Id}@test.local`;
-    const user = await this.usersService.findOrCreate(auth0Id, email);
-    // ensure collection ,user first
-    await this.collectionsService.findOne(user.id, id);
-    return this.bookmarksService.findAll(user.id, id);
+  async remove(@Req() req: any, @Param('id') id: string) {
+    const userId = await this.getUserId(req.user.sub);
+    return this.collectionsService.remove(userId, id);
   }
 }

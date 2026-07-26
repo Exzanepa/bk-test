@@ -1,19 +1,25 @@
-import { IsNotEmpty, IsString, IsUrl, IsOptional, IsUUID } from 'class-validator';
+import { IsUrl, IsString, IsOptional, MaxLength, IsNotEmpty } from 'class-validator';
 
 export class CreateBookmarkDto {
   @IsUrl()
   @IsNotEmpty()
   url: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
+  @MaxLength(200)
   title?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
+  @MaxLength(1000)
   description?: string;
 
-  @IsUUID()
-  @IsNotEmpty()
-  collectionId: string;
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @IsOptional()
+  @IsString()
+  collectionId?: string; 
 }

@@ -1,46 +1,57 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Put, Param, Delete, UseGuards, Req, Query, NotFoundException } from '@nestjs/common';
 import { BookmarksService } from './bookmarks.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { UsersService } from '../users/users.service';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 import { UpdateBookmarkDto } from './dto/update-bookmark.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 
-@UseGuards(JwtAuthGuard)
 @Controller('bookmarks')
+@UseGuards(JwtAuthGuard)
 export class BookmarksController {
   constructor(
-    private bookmarksService: BookmarksService,
-    private usersService: UsersService,
+    private readonly bookmarksService: BookmarksService,
+    private readonly prisma: PrismaService,
   ) {}
 
+  private async getUserId(auth0Id: string) {
+    const user = await this.prisma.user.findUnique({ where: { auth0Id } });
+    if (!user) throw new NotFoundException('User not found - run seed');
+    return user.id;
+  }
+
   @Post()
-  async create(@CurrentUser() authUser: any, @Body() dto: CreateBookmarkDto) {
-    const user = await this.usersService.findOrCreate(authUser.auth0Id, authUser.email);
-    return this.bookmarksService.create(user.id, dto);
+  async create(@Req() req: any, @Body() dto: CreateBookmarkDto) {
+    const userId = await this.getUserId(req.user.sub);
+    return this.bookmarksService.create(userId, dto);
   }
 
   @Get()
-  async findAll(@CurrentUser() authUser: any, @Query('collectionId') collectionId?: string) {
-    const user = await this.usersService.findOrCreate(authUser.auth0Id, authUser.email);
-    return this.bookmarksService.findAll(user.id, collectionId);
+  async findAll(@Req() req: any, @Query('collectionId') collectionId?: string, @Query('search') search?: string) {
+    const userId = await this.getUserId(req.user.sub);
+    return this.bookmarksService.findAll(userId, collectionId, search);
   }
 
   @Get(':id')
-  async findOne(@CurrentUser() authUser: any, @Param('id') id: string) {
-    const user = await this.usersService.findOrCreate(authUser.auth0Id, authUser.email);
-    return this.bookmarksService.findOne(user.id, id);
+  async findOne(@Req() req: any, @Param('id') id: string) {
+    const userId = await this.getUserId(req.user.sub);
+    return this.bookmarksService.findOne(userId, id);
+  }
+
+  @Put(':id')
+  async updatePut(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateBookmarkDto) {
+    const userId = await this.getUserId(req.user.sub);
+    return this.bookmarksService.update(userId, id, dto);
   }
 
   @Patch(':id')
-  async update(@CurrentUser() authUser: any, @Param('id') id: string, @Body() dto: UpdateBookmarkDto) {
-    const user = await this.usersService.findOrCreate(authUser.auth0Id, authUser.email);
-    return this.bookmarksService.update(user.id, id, dto);
+  async updatePatch(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateBookmarkDto) {
+    const userId = await this.getUserId(req.user.sub);
+    return this.bookmarksService.update(userId, id, dto);
   }
 
   @Delete(':id')
-  async remove(@CurrentUser() authUser: any, @Param('id') id: string) {
-    const user = await this.usersService.findOrCreate(authUser.auth0Id, authUser.email);
-    return this.bookmarksService.remove(user.id, id);
+  async remove(@Req() req: any, @Param('id') id: string) {
+    const userId = await this.getUserId(req.user.sub);
+    return this.bookmarksService.remove(userId, id);
   }
 }
