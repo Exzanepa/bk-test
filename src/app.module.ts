@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { UsersController } from './users/users.controller';
 import { CollectionsModule } from './collections/collections.module';
+import { BookmarksModule } from './bookmarks/bookmarks.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { CollectionsModule } from './collections/collections.module';
     UsersModule,
     HealthModule,
     CollectionsModule,
+    BookmarksModule,
   ],
   controllers: [AppController, UsersController],
   providers: [AppService],
